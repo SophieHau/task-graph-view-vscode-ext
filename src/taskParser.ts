@@ -1,24 +1,60 @@
+/**
+ * Represents a single task node in the dependency graph.
+ */
 export interface Task {
+  /** Unique identifier for the task. */
   id: string;
+  /** Human-readable display name. Defaults to `id` if not provided. */
   label: string;
+  /** Optional free-text description shown in the detail panel. */
   description?: string;
+  /** IDs of tasks that must complete before this one can start. */
   dependsOn?: string[];
+  /** Current execution state of the task. */
   status?: "pending" | "running" | "done" | "failed";
+  /** Importance level used for visual prioritization. */
   priority?: "low" | "medium" | "high" | "critical";
 }
 
+/**
+ * The root structure of a `tasks.json` file.
+ */
 export interface TaskGraph {
+  /** Ordered list of task nodes. */
   tasks: Task[];
+  /** Optional metadata displayed in the graph panel header. */
   meta?: {
+    /** Display name for the pipeline or project. */
     name?: string;
+    /** Arbitrary version string. */
     version?: string;
   };
 }
 
+/**
+ * Discriminated union returned by {@link parseTasksFile}.
+ * On success, `data` contains the validated graph.
+ * On failure, `error` contains a human-readable message.
+ */
 export type ParseResult =
   | { success: true; data: TaskGraph }
   | { success: false; error: string };
 
+/**
+ * Parses and validates the raw content of a `tasks.json` file.
+ *
+ * Validation rules:
+ * - Root must be a JSON object with a `tasks` array.
+ * - Each task must be an object with a unique, non-empty string `id`.
+ * - All `dependsOn` references must point to a declared task `id`.
+ *
+ * Invalid or missing optional fields (`label`, `status`, `priority`,
+ * `description`) are silently normalised to their defaults rather than
+ * rejected, so the graph always renders something useful.
+ *
+ * @param raw - Raw UTF-8 string content of the file.
+ * @returns A {@link ParseResult} indicating success or failure.
+ */
 export function parseTasksFile(raw: string): ParseResult {
   let json: unknown;
   try {
@@ -82,10 +118,12 @@ export function parseTasksFile(raw: string): ParseResult {
   };
 }
 
+/** Returns `true` if `v` is a valid {@link Task} status string. */
 function isStatus(v: unknown): v is Task["status"] {
   return ["pending", "running", "done", "failed"].includes(v as string);
 }
 
+/** Returns `true` if `v` is a valid {@link Task} priority string. */
 function isPriority(v: unknown): v is Task["priority"] {
   return ["low", "medium", "high", "critical"].includes(v as string);
 }

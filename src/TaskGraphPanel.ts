@@ -1,11 +1,36 @@
+/**
+ * Manages the Task Graph webview panel.
+ *
+ * At most one panel exists at a time (tracked via {@link TaskGraphPanel.currentPanel}).
+ * Calling {@link TaskGraphPanel.createOrShow} either creates a new panel or reveals
+ * the existing one and pushes fresh data to it.
+ *
+ * Communication with the React webview uses VS Code's `postMessage` API:
+ * - **Extension → Webview**: `{ type: "update", data: TaskGraph }` on file save.
+ * - **Webview → Extension**: `{ command: "focusTask", taskId: string }` on node click.
+ */
 import * as vscode from "vscode";
 import { TaskGraph } from "./taskParser";
 
+/**
+ * Singleton wrapper around a {@link vscode.WebviewPanel} that renders
+ * the task dependency graph.
+ */
 export class TaskGraphPanel {
+  /** The currently active panel instance, or `undefined` if none is open. */
   public static currentPanel: TaskGraphPanel | undefined;
+
   private readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
 
+  /**
+   * Private constructor — use {@link TaskGraphPanel.createOrShow} instead.
+   *
+   * @param panel - The underlying VS Code webview panel.
+   * @param extensionUri - URI of the extension's install directory (used to resolve assets).
+   * @param data - Initial task graph data to render.
+   * @param filename - Base filename shown in the panel title.
+   */
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
@@ -28,6 +53,16 @@ export class TaskGraphPanel {
     );
   }
 
+  /**
+   * Opens the graph panel, or reveals and refreshes it if already open.
+   *
+   * If a panel already exists, the new `data` is pushed via `postMessage` so
+   * the webview re-renders without a full reload.
+   *
+   * @param extensionUri - URI of the extension's install directory.
+   * @param data - Task graph to display.
+   * @param filename - Base filename shown in the panel title.
+   */
   public static createOrShow(
     extensionUri: vscode.Uri,
     data: TaskGraph,
@@ -57,10 +92,27 @@ export class TaskGraphPanel {
     TaskGraphPanel.currentPanel = new TaskGraphPanel(panel, extensionUri, data, filename);
   }
 
+  /**
+   * Pushes updated task graph data to the open panel.
+   * No-op if no panel is currently open.
+   *
+   * @param data - Updated task graph data.
+   */
   public static update(data: TaskGraph) {
     TaskGraphPanel.currentPanel?._panel.webview.postMessage({ type: "update", data });
   }
 
+  /**
+   * Generates the full HTML document served inside the webview.
+   *
+   * A Content Security Policy restricts script execution to nonce-tagged
+   * scripts only, preventing XSS from injected content.
+   *
+   * @param extensionUri - URI of the extension's install directory.
+   * @param data - Initial task graph serialised into `window.__INITIAL_DATA__`.
+   * @param filename - Filename passed through to the React app.
+   * @returns HTML string for the webview.
+   */
   private _getHtmlForWebview(
     extensionUri: vscode.Uri,
     data: TaskGraph,
@@ -98,6 +150,10 @@ export class TaskGraphPanel {
 </html>`;
   }
 
+  /**
+   * Disposes the panel and all associated resources.
+   * Clears {@link TaskGraphPanel.currentPanel} so a new panel can be created.
+   */
   public dispose() {
     TaskGraphPanel.currentPanel = undefined;
     this._panel.dispose();
@@ -107,6 +163,12 @@ export class TaskGraphPanel {
   }
 }
 
+/**
+ * Generates a cryptographically random 32-character alphanumeric nonce
+ * for use in the webview Content Security Policy.
+ *
+ * @returns A 32-character nonce string.
+ */
 function getNonce(): string {
   let text = "";
   const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
