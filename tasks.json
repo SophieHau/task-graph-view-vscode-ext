@@ -1,0 +1,64 @@
+{
+    "meta": {
+      "name": "Build & Deploy Pipeline",
+      "version": "1.0.0"
+    },
+    "tasks": [
+      {
+        "id": "lint",
+        "label": "Lint Sources",
+        "description": "Run ESLint and Prettier checks on all source files.",
+        "status": "done",
+        "priority": "medium"
+      },
+      {
+        "id": "unit-test",
+        "label": "Unit Tests",
+        "description": "Run Jest unit test suite.",
+        "dependsOn": ["lint"],
+        "status": "done",
+        "priority": "high"
+      },
+      {
+        "id": "build-ext",
+        "label": "Build Extension",
+        "description": "Bundle the VS Code extension via esbuild.",
+        "dependsOn": ["lint"],
+        "status": "running",
+        "priority": "high"
+      },
+      {
+        "id": "build-ui",
+        "label": "Build Webview UI",
+        "description": "Compile the React Webview with Vite.",
+        "dependsOn": ["lint"],
+        "status": "running",
+        "priority": "high"
+      },
+      {
+        "id": "e2e-test",
+        "label": "E2E Tests",
+        "description": "Run Playwright end-to-end tests against the packaged extension.",
+        "dependsOn": ["unit-test", "build-ext", "build-ui"],
+        "status": "pending",
+        "priority": "high"
+      },
+      {
+        "id": "package",
+        "label": "Package VSIX",
+        "description": "Bundle the extension into a .vsix distributable.",
+        "dependsOn": ["e2e-test"],
+        "status": "pending",
+        "priority": "critical"
+      },
+      {
+        "id": "publish",
+        "label": "Publish to Marketplace",
+        "description": "Upload the .vsix to the VS Code Marketplace.",
+        "dependsOn": ["package"],
+        "status": "pending",
+        "priority": "critical"
+      }
+    ]
+  }
+  

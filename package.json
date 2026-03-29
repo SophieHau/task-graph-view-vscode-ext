@@ -1,0 +1,55 @@
+{
+  "name": "task-graph-view",
+  "displayName": "Task Graph View",
+  "description": "Visualize task dependency graphs from tasks.json files in a React-powered Webview panel.",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:taskGraphView.show"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "taskGraphView.show",
+        "title": "Task Graph View: Show Graph"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "taskGraphView.show",
+          "when": "resourceFilename == tasks.json",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build:ext && npm run build:ui",
+    "build:ext": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build:ui": "cd webview-ui && npm run build",
+    "watch:ext": "npm run build:ext -- --watch",
+    "watch:ui": "cd webview-ui && npm run dev",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint src --ext .ts"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.3.0"
+  }
+}
