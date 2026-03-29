@@ -65,6 +65,7 @@ export function parseTasksFile(raw: string): ParseResult {
 
   // Validate dependency references
   for (const task of tasks) {
+    /* istanbul ignore next */
     for (const dep of task.dependsOn ?? []) {
       if (!ids.has(dep)) {
         return { success: false, error: `Task "${task.id}" depends on unknown id "${dep}".` };

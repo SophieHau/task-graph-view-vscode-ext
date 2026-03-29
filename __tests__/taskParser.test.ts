@@ -44,6 +44,32 @@ describe("parseTasksFile", () => {
     if (!result.success) expect(result.error).toMatch(/unknown id/i);
   });
 
+  it("fails when tasks is not an array", () => {
+    const result = parseTasksFile(JSON.stringify({ tasks: "nope" }));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/"tasks" must be an array/);
+  });
+
+  it("fails when a task is not an object", () => {
+    const result = parseTasksFile(JSON.stringify({ tasks: [42] }));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/not an object/);
+  });
+
+  it("fails when a task is missing an id", () => {
+    const result = parseTasksFile(JSON.stringify({ tasks: [{ label: "No ID" }] }));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/missing a string "id"/);
+  });
+
+  it("preserves description when provided", () => {
+    const result = parseTasksFile(
+      JSON.stringify({ tasks: [{ id: "a", description: "my desc" }] })
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.tasks[0].description).toBe("my desc");
+  });
+
   it("defaults status to pending and priority to medium", () => {
     const result = parseTasksFile(JSON.stringify({ tasks: [{ id: "x" }] }));
     expect(result.success).toBe(true);
