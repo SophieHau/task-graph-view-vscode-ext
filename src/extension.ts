@@ -9,8 +9,6 @@
  * - Set up a file-system watcher for live reload on save.
  */
 import * as vscode from "vscode";
-import * as fs from "fs";
-import * as path from "path";
 import { TaskGraphPanel } from "./TaskGraphPanel";
 import { parseTasksFile } from "./taskParser";
 
@@ -22,14 +20,18 @@ import { parseTasksFile } from "./taskParser";
  * @param context - The extension context provided by the host.
  */
 export function activate(context: vscode.ExtensionContext) {
+  // Tracks the active file watcher so we can replace it when the user opens
+  // a different tasks.json without leaking the previous watcher.
+  let fileWatcher: vscode.Disposable | undefined;
+
   const disposable = vscode.commands.registerCommand(
     "taskGraphView.show",
     async (uri?: vscode.Uri) => {
-      // Resolve the tasks.json path: from context menu URI or workspace search
-      let filePath: string | undefined;
+      // Resolve the tasks.json URI: from context menu or workspace search
+      let fileUri: vscode.Uri | undefined;
 
       if (uri) {
-        filePath = uri.fsPath;
+        fileUri = uri;
       } else {
         const files = await vscode.workspace.findFiles("**/tasks.json", "**/node_modules/**", 5);
         if (files.length === 0) {
@@ -37,7 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
         if (files.length === 1) {
-          filePath = files[0].fsPath;
+          fileUri = files[0];
         } else {
           // Multiple matches — let the user pick
           const picked = await vscode.window.showQuickPick(
@@ -45,39 +47,49 @@ export function activate(context: vscode.ExtensionContext) {
             { placeHolder: "Select a tasks.json file" }
           );
           if (!picked) return;
-          filePath = picked.uri.fsPath;
+          fileUri = picked.uri;
         }
       }
 
-      if (!fs.existsSync(filePath)) {
-        vscode.window.showErrorMessage(`File not found: ${filePath}`);
+      // Read asynchronously via the VS Code filesystem API so this works
+      // in remote environments (SSH, WSL, Dev Containers, Codespaces)
+      let raw: string;
+      try {
+        raw = new TextDecoder().decode(await vscode.workspace.fs.readFile(fileUri));
+      } catch {
+        vscode.window.showErrorMessage(`File not found: ${fileUri.fsPath}`);
         return;
       }
 
-      const raw = fs.readFileSync(filePath, "utf-8");
       const result = parseTasksFile(raw);
-
       if (!result.success) {
         vscode.window.showErrorMessage(`Invalid tasks.json: ${result.error}`);
         return;
       }
 
-      TaskGraphPanel.createOrShow(context.extensionUri, result.data!, path.basename(filePath));
+      const filename = fileUri.path.split("/").pop() ?? "tasks.json";
+      TaskGraphPanel.createOrShow(context.extensionUri, result.data, filename);
 
-      // Watch file for live reload on every save
-      const watcher = fs.watch(filePath, () => {
+      // Replace the previous watcher before creating a new one so that opening
+      // a second tasks.json doesn't leave a dangling watcher on the first file.
+      fileWatcher?.dispose();
+      const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(
+          vscode.Uri.file(fileUri.fsPath.replace(/[^/\\]+$/, "")),
+          filename
+        )
+      );
+      watcher.onDidChange(async () => {
         try {
-          const updated = fs.readFileSync(filePath!, "utf-8");
+          const updated = new TextDecoder().decode(
+            await vscode.workspace.fs.readFile(fileUri!)
+          );
           const res = parseTasksFile(updated);
-          if (res.success) {
-            TaskGraphPanel.update(res.data!);
-          }
-        } catch {
-          // ignore transient read errors during save
-        }
+          if (res.success) TaskGraphPanel.update(res.data);
+        } catch { /* ignore transient read errors during save */ }
       });
-
-      context.subscriptions.push({ dispose: () => watcher.close() });
+      fileWatcher = watcher;
+      context.subscriptions.push(watcher);
     }
   );
 

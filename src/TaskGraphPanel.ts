@@ -10,7 +10,8 @@
  * - **Webview → Extension**: `{ command: "focusTask", taskId: string }` on node click.
  */
 import * as vscode from "vscode";
-import { TaskGraph } from "./taskParser";
+import { randomBytes } from "crypto";
+import type { TaskGraph } from "./types";
 
 /**
  * Singleton wrapper around a {@link vscode.WebviewPanel} that renders
@@ -57,7 +58,8 @@ export class TaskGraphPanel {
    * Opens the graph panel, or reveals and refreshes it if already open.
    *
    * If a panel already exists, the new `data` is pushed via `postMessage` so
-   * the webview re-renders without a full reload.
+   * the webview re-renders without a full reload. The panel title is also updated
+   * to reflect the new filename.
    *
    * @param extensionUri - URI of the extension's install directory.
    * @param data - Task graph to display.
@@ -73,6 +75,7 @@ export class TaskGraphPanel {
       : undefined;
 
     if (TaskGraphPanel.currentPanel) {
+      TaskGraphPanel.currentPanel._panel.title = `Task Graph — ${filename}`;
       TaskGraphPanel.currentPanel._panel.reveal(column);
       TaskGraphPanel.currentPanel._panel.webview.postMessage({ type: "update", data });
       return;
@@ -84,7 +87,6 @@ export class TaskGraphPanel {
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: true,
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, "dist", "webview")],
       }
     );
@@ -105,8 +107,9 @@ export class TaskGraphPanel {
   /**
    * Generates the full HTML document served inside the webview.
    *
-   * A Content Security Policy restricts script execution to nonce-tagged
-   * scripts only, preventing XSS from injected content.
+   * A Content Security Policy restricts script and style execution to
+   * nonce-tagged elements only, preventing XSS from injected content.
+   * Inline data is JSON-escaped to prevent `</script>` injection.
    *
    * @param extensionUri - URI of the extension's install directory.
    * @param data - Initial task graph serialised into `window.__INITIAL_DATA__`.
@@ -127,13 +130,19 @@ export class TaskGraphPanel {
     );
     const nonce = getNonce();
 
+    // Escape </script> sequences to prevent breaking out of the script block
+    const safeJson = JSON.stringify({ data, filename })
+      .replace(/</g, "\\u003c")
+      .replace(/>/g, "\\u003e")
+      .replace(/&/g, "\\u0026");
+
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'none';
-             style-src ${webview.cspSource} 'unsafe-inline';
+             style-src ${webview.cspSource};
              script-src 'nonce-${nonce}';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="${styleUri}" />
@@ -142,7 +151,7 @@ export class TaskGraphPanel {
 <body>
   <div id="root"></div>
   <script nonce="${nonce}">
-    window.__INITIAL_DATA__ = ${JSON.stringify({ data, filename })};
+    window.__INITIAL_DATA__ = ${safeJson};
     window.__VSCODE_API__ = acquireVsCodeApi();
   </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
@@ -164,16 +173,11 @@ export class TaskGraphPanel {
 }
 
 /**
- * Generates a cryptographically random 32-character alphanumeric nonce
+ * Generates a cryptographically secure 32-character hex nonce
  * for use in the webview Content Security Policy.
  *
- * @returns A 32-character nonce string.
+ * @returns A 32-character hex nonce string.
  */
 function getNonce(): string {
-  let text = "";
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return randomBytes(16).toString("hex");
 }

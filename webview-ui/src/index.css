@@ -1,10 +1,9 @@
-/* ── Fonts ──────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@600;800&display=swap');
-
 /* ── Theme tokens (VS Code-aware) ───────────────────────────────────────── */
 :root {
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-display: 'Syne', sans-serif;
+  /* System font stacks — no external network requests needed */
+  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', ui-monospace,
+               'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+  --font-display: system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --bg: var(--vscode-editor-background, #0f111a);
   --surface: var(--vscode-sideBar-background, #161b27);
@@ -138,6 +137,43 @@ body {
   display: block;
   overflow: visible;
 }
+
+/* ── SVG node & edge classes ────────────────────────────────────────────── */
+.node-group { cursor: pointer; }
+
+.node-card {
+  fill: var(--node-bg);
+  stroke: var(--node-border);
+  stroke-width: 1;
+  transition: fill 0.18s, stroke 0.18s;
+}
+.node-card.node-hovered  { fill: var(--node-hover-bg); }
+.node-card.node-selected { fill: var(--node-selected-bg); stroke: var(--node-selected-border); stroke-width: 2; }
+
+.edge-path { transition: all 0.2s; }
+
+/* ── Status colours ─────────────────────────────────────────────────────── */
+.status-pending  { fill: var(--status-pending);  background: var(--status-pending); }
+.status-running  { fill: var(--status-running);  background: var(--status-running); }
+.status-done     { fill: var(--status-done);     background: var(--status-done); }
+.status-failed   { fill: var(--status-failed);   background: var(--status-failed); }
+
+/* ── Priority colours ───────────────────────────────────────────────────── */
+.priority-low      { fill: var(--priority-low);      background: var(--priority-low); }
+.priority-medium   { fill: var(--priority-medium);   background: var(--priority-medium); }
+.priority-high     { fill: var(--priority-high);     background: var(--priority-high); }
+.priority-critical { fill: var(--priority-critical); background: var(--priority-critical); }
+
+/* ── Detail panel badges ────────────────────────────────────────────────── */
+.status-badge.status-pending  { background: var(--status-pending); }
+.status-badge.status-running  { background: var(--status-running); }
+.status-badge.status-done     { background: var(--status-done); }
+.status-badge.status-failed   { background: var(--status-failed); }
+
+.priority-badge.priority-low      { background: var(--priority-low); }
+.priority-badge.priority-medium   { background: var(--priority-medium); }
+.priority-badge.priority-high     { background: var(--priority-high); }
+.priority-badge.priority-critical { background: var(--priority-critical); }
 
 /* ── Detail panel ───────────────────────────────────────────────────────── */
 .detail-panel {

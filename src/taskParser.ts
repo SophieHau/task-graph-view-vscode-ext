@@ -1,35 +1,5 @@
-/**
- * Represents a single task node in the dependency graph.
- */
-export interface Task {
-  /** Unique identifier for the task. */
-  id: string;
-  /** Human-readable display name. Defaults to `id` if not provided. */
-  label: string;
-  /** Optional free-text description shown in the detail panel. */
-  description?: string;
-  /** IDs of tasks that must complete before this one can start. */
-  dependsOn?: string[];
-  /** Current execution state of the task. */
-  status?: "pending" | "running" | "done" | "failed";
-  /** Importance level used for visual prioritization. */
-  priority?: "low" | "medium" | "high" | "critical";
-}
-
-/**
- * The root structure of a `tasks.json` file.
- */
-export interface TaskGraph {
-  /** Ordered list of task nodes. */
-  tasks: Task[];
-  /** Optional metadata displayed in the graph panel header. */
-  meta?: {
-    /** Display name for the pipeline or project. */
-    name?: string;
-    /** Arbitrary version string. */
-    version?: string;
-  };
-}
+import type { Task, TaskGraph } from "./types";
+export type { Task, TaskGraph };
 
 /**
  * Discriminated union returned by {@link parseTasksFile}.
