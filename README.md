@@ -2,7 +2,7 @@
 
 A VS Code / Eclipse Theia extension that renders an interactive dependency graph from a `tasks.json` file, live-reloading on every save.
 
-![CI](https://github.com/YOUR_USERNAME/task-graph-view/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/SophieHau/task-graph-view-vscode-ext/actions/workflows/ci.yml/badge.svg)
 
 ## Features
 
@@ -12,13 +12,35 @@ A VS Code / Eclipse Theia extension that renders an interactive dependency graph
 - **Detail panel** — click any node to inspect its description, status, priority, and dependencies; click a dep to jump to it
 - **Context menu** — right-click any `tasks.json` in the Explorer to open the graph directly
 
+## Installation
+
+### From VSIX (VS Code / Theia)
+
+1. Download or build the `.vsix` file (see [Development](#development))
+2. **VS Code**: Extensions view → `...` → **Install from VSIX**
+3. **Theia IDE**: Extensions view → `...` → **Install from VSIX**
+4. Reload the editor
+
+### Build the VSIX yourself
+
+```bash
+npm install
+cd webview-ui && npm install && cd ..
+npm install -g @vscode/vsce
+vsce package --no-dependencies --skip-license --baseContentUrl https://github.com/SophieHau/task-graph-view-vscode-ext
+```
+
 ## Usage
 
 1. Create a `tasks.json` file in your workspace (see [examples/tasks.json](examples/tasks.json))
 2. Open the Command Palette (`Ctrl+Shift+P`) and run **Task Graph View: Show Graph**
 3. Or right-click a `tasks.json` file in the Explorer → **Task Graph View: Show Graph**
 
+> **Note for Theia users:** Theia applies its built-in task runner schema to files named `tasks.json`, which will show a warning for the `meta` field. This is cosmetic — the extension works correctly regardless.
+
 ## `tasks.json` schema
+
+> **Note:** The `meta` field is optional and only used for the graph panel title. Editors that apply the VS Code built-in task runner schema (e.g. Theia) may show a warning for it — you can safely remove it or ignore the warning.
 
 ```json
 {
@@ -90,6 +112,18 @@ npm test
 
 # Press F5 in VS Code to launch the Extension Development Host
 ```
+
+> **Note:** `webview-ui/index.html` must exist for Vite to build. If it is missing, create it:
+> ```html
+> <!DOCTYPE html>
+> <html lang="en">
+>   <head><meta charset="UTF-8" /><title>Task Graph</title></head>
+>   <body>
+>     <div id="root"></div>
+>     <script type="module" src="/src/main.tsx"></script>
+>   </body>
+> </html>
+> ```
 
 ## Compatibility
 

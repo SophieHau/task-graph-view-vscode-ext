@@ -5,4 +5,3 @@ webview-ui/dist/
 *.vsix
 .vscode-test/
 coverage/
-.idea/
